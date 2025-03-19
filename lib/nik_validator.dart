@@ -132,7 +132,6 @@ class NIKValidator {
 
     log("nik valid ${_validate(nik, location)}");
 
-    /// Check NIK and make sure is correct
     if (_validate(nik, location)) {
       int currentYear = _getCurrentYear();
       int nikYear = _getNIKYear(nik);
