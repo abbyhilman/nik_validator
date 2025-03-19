@@ -85,6 +85,9 @@ class NIKValidator {
   AgeDuration _getNextBirthday(DateTime bornDate, DateTime now) =>
       Age.instance.dateDifference(fromDate: now, toDate: bornDate);
 
+  // Get Name
+  String? _getName(String? providedName) => providedName ?? "NAMA TIDAK TERSEDIA";
+
   ///Get Zodiac from bornDate and bornMonth
   String _getZodiac(int date, int month, bool isWoman) {
     if (isWoman) date -= 40;
@@ -170,6 +173,8 @@ class NIKValidator {
       AgeDuration nextBirthday = _getNextBirthday(
           DateTime.parse("$bornYear-$bornMonthFull-$nikDateFull"),
           DateTime.now());
+      
+      String? extractedName = _getName(name);
       log("success");
       return NIKModel(
           nik: nik,
@@ -190,7 +195,8 @@ class NIKValidator {
           subdistrict: subdistrict,
           subdistrictId: subdistrictId,
           postalCode: postalCode,
-          valid: true);
+          valid: true,
+          name: extractedName);
     }
     return NIKModel.empty();
   }
@@ -362,6 +368,9 @@ class NIKModel {
   ///Check the nik number is valid or not
   bool? valid;
 
+  //Check Name
+  String? name;
+
   NIKModel(
       {this.nik,
       this.gender,
@@ -380,7 +389,8 @@ class NIKModel {
       this.ageYear,
       this.ageMonth,
       this.ageDay,
-      this.nextBirthday});
+      this.nextBirthday,
+      this.name});
 
   ///Output when the nik number is not valid
   factory NIKModel.empty() => NIKModel(
@@ -398,5 +408,6 @@ class NIKModel {
       city: " ",
       subdistrict: " ",
       postalCode: " ",
-      valid: false);
+      valid: false,
+      name: "NAMA TIDAK TERSEDIA");
 }
