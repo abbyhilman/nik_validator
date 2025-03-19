@@ -5,19 +5,27 @@ import 'dart:developer';
 
 import 'package:flutter/services.dart';
 
-///NIKValidator class to convert Identity Card Informations into useful data
+/// NIKValidator class to convert Identity Card Informations into useful data
 class NIKValidator {
-  ///Create instance class object
+  /// Create instance class object
   static NIKValidator instance = NIKValidator();
 
-  ///Get current year and get the last 2 digit numbers
+  /// Variabel statis untuk menyimpan nama
+  static String? _storedName;
+
+  /// Setter untuk mengatur nama sebelum parse dipanggil
+  void setName(String? name) {
+    _storedName = name;
+  }
+
+  /// Get current year and get the last 2 digit numbers
   int _getCurrentYear() =>
       int.parse(DateTime.now().year.toString().substring(2, 4));
 
-  ///Get year in NIK
+  /// Get year in NIK
   int _getNIKYear(String nik) => int.parse(nik.substring(10, 12));
 
-  ///Get date in NIK
+  /// Get date in NIK
   int _getNIKDate(String nik) => int.parse(nik.substring(6, 8));
 
   String _getNIKDateFull(String nik, bool isWoman) {
@@ -28,7 +36,7 @@ class NIKValidator {
     return date > 9 ? date.toString() : "0$date";
   }
 
-  ///Get subdistrict split postalcode
+  /// Get subdistrict split postalcode
   List<String> _getSubdistrictPostalCode(
           String nik, Map<String, dynamic> location) =>
       location['kecamatan'][nik.substring(0, 6)]
@@ -36,109 +44,95 @@ class NIKValidator {
           .toUpperCase()
           .split(" -- ");
 
-  ///Get province in NIK
+  /// Get province in NIK
   String? _getProvince(String nik, Map<String, dynamic> location) =>
       location['provinsi'][nik.substring(0, 2)];
 
-  ///Get province id in NIK
+  /// Get province id in NIK
   String? _getProvinceId(String nik, Map<String, dynamic> location) =>
       nik.substring(0, 2);
 
-  ///Get city in NIK
+  /// Get city in NIK
   String? _getCity(String nik, Map<String, dynamic> location) =>
       location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)];
 
-  ///Get city id in NIK
+  /// Get city id in NIK
   String? _getCityId(String nik, Map<String, dynamic> location) =>
       nik.substring(2, 4);
 
-  ///Get subdisctrict in NIK
+  /// Get subdistrict in NIK
   String? _getSubdistrict(String nik, Map<String, dynamic> location) =>
       location['kecamatan'][nik.substring(0, 2) + nik.substring(2, 4)]
           [nik.substring(4, 6)];
 
-  ///Get subdisctrict id in NIK
+  /// Get subdistrict id in NIK
   String? _getSubdistrictId(String nik, Map<String, dynamic> location) =>
       nik.substring(4, 6);
 
-  ///Get NIK Gender
+  /// Get NIK Gender
   String _getGender(int date) => date > 40 ? "PEREMPUAN" : "LAKI-LAKI";
 
-  ///Get born month
+  /// Get born month
   int _getBornMonth(String nik) => int.parse(nik.substring(8, 10));
 
   String _getBornMonthFull(String nik) => nik.substring(8, 10);
 
-  ///Get born year
+  /// Get born year
   String _getBornYear(int nikYear, int currentYear) => nikYear < currentYear
       ? "20${nikYear > 9 ? nikYear : '0' + nikYear.toString()}"
       : "19${nikYear > 9 ? nikYear : '0' + nikYear.toString()}";
 
-  ///Get unique code in NIK
+  /// Get unique code in NIK
   String _getUniqueCode(String nik) => nik.substring(12, 16);
 
-  ///Get age from nik
+  /// Get age from nik
   AgeDuration _getAge(DateTime bornDate, DateTime now) => Age.instance
       .dateDifference(fromDate: bornDate, toDate: now, includeToDate: false);
 
-  ///Get next birthday
+  /// Get next birthday
   AgeDuration _getNextBirthday(DateTime bornDate, DateTime now) =>
       Age.instance.dateDifference(fromDate: now, toDate: bornDate);
 
-  // Get Name
-  String? _getName(String? providedName) => providedName ?? "NAMA TIDAK TERSEDIA";
+  /// Get Name dari variabel statis
+  String? _getName() => _storedName ?? "NAMA TIDAK TERSEDIA";
 
-  ///Get Zodiac from bornDate and bornMonth
+  /// Get Zodiac from bornDate and bornMonth
   String _getZodiac(int date, int month, bool isWoman) {
     if (isWoman) date -= 40;
 
     if ((month == 1 && date >= 20) || (month == 2 && date < 19))
       return "Aquarius";
-
     if ((month == 2 && date >= 19) || (month == 3 && date < 21))
       return "Pisces";
-
     if ((month == 3 && date >= 21) || (month == 4 && date < 20)) return "Aries";
-
     if ((month == 4 && date >= 20) || (month == 5 && date < 21))
       return "Taurus";
-
     if ((month == 5 && date >= 21) || (month == 6 && date < 22))
       return "Gemini";
-
     if ((month == 6 && date >= 21) || (month == 7 && date < 23))
       return "Cancer";
-
     if ((month == 7 && date >= 23) || (month == 8 && date < 23)) return "Leo";
-
     if ((month == 8 && date >= 23) || (month == 9 && date < 23)) return "Virgo";
-
     if ((month == 9 && date >= 23) || (month == 10 && date < 24))
       return "Libra";
-
     if ((month == 10 && date >= 24) || (month == 11 && date < 23))
       return "Scorpio";
-
     if ((month == 11 && date >= 23) || (month == 12 && date < 22))
       return "Sagitarius";
-
     if ((month == 12 && date >= 22) || (month == 1 && date < 20))
       return "Capricorn";
 
     return "Zodiak tidak ditemukan";
   }
 
-  ///Parsing Identity Card information from Indonesia
-  ///by using unique number [nik]
-  ///
-  ///You can get an information like address, city,
-  ///gender, and others
+  /// Parsing Identity Card information from Indonesia
+  /// by using unique number [nik]
   Future<NIKModel> parse({required String nik}) async {
     Map<String, dynamic>? location = await _getLocationAsset();
 
     log("nik valid ${_validate(nik, location)}");
 
-    ///Check NIK and make sure is correct
+    /// Check NIK and make sure is correct
     if (_validate(nik, location)) {
       int currentYear = _getCurrentYear();
       int nikYear = _getNIKYear(nik);
@@ -173,8 +167,9 @@ class NIKValidator {
       AgeDuration nextBirthday = _getNextBirthday(
           DateTime.parse("$bornYear-$bornMonthFull-$nikDateFull"),
           DateTime.now());
-      
-      String? extractedName = _getName(name);
+
+      String? extractedName = _getName(); // Ambil nama dari variabel statis
+
       log("success");
       return NIKModel(
           nik: nik,
@@ -201,7 +196,7 @@ class NIKValidator {
     return NIKModel.empty();
   }
 
-  ///Validate NIK and make sure the number is correct
+  /// Validate NIK and make sure the number is correct
   bool _validate(String nik, Map<String, dynamic>? location) {
     log(location!['provinsi'][nik.substring(0, 2)]);
     log(location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)]
@@ -219,38 +214,31 @@ class NIKValidator {
             null;
   }
 
-  ///Load location asset like province, city and subdistrict
-  ///from local json data
+  /// Load location asset like province, city and subdistrict
+  /// from local json data
   Future<Map<String, dynamic>?> _getLocationAsset() async =>
       jsonDecode(await rootBundle
           .loadString("packages/nik_validator/assets/wilayah.json"));
 }
 
-///Class for calculating age and next birthday,
-///i get this class from the package [age]
+/// Class for calculating age and next birthday
 class Age {
-  ///create instance for an age
   static Age instance = Age();
 
-  ///_daysInMonth cost contains days per months; daysInMonth method to be used instead.
   List<int> _daysInMonths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
-  ///isLeapYear method
   bool _isLeapYear(int year) =>
       (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0));
 
-  ///daysInMonth method
   int _daysInMonth(int year, int month) =>
       (month == DateTime.february && _isLeapYear(year))
           ? 29
           : _daysInMonths[month - 1];
 
-  ///Function to check different year, month and date from two datetime
   AgeDuration dateDifference(
       {required DateTime fromDate,
       required DateTime toDate,
       bool includeToDate = false}) {
-    ///Check if toDate to be included in the calculation
     DateTime endDate = (includeToDate) ? toDate.add(Duration(days: 1)) : toDate;
 
     int years = endDate.year - fromDate.year;
@@ -260,7 +248,6 @@ class Age {
     if (fromDate.month > endDate.month) {
       years--;
       months = (DateTime.monthsPerYear + endDate.month - fromDate.month);
-
       if (fromDate.day > endDate.day) {
         months--;
         days = _daysInMonth(fromDate.year + years,
@@ -283,7 +270,6 @@ class Age {
       }
     } else {
       months = (endDate.month - fromDate.month);
-
       if (fromDate.day > endDate.day) {
         months--;
         days = _daysInMonth(fromDate.year + years, (fromDate.month + months)) +
@@ -298,101 +284,59 @@ class Age {
   }
 }
 
-///Storing age duration from the age class
+/// Storing age duration from the age class
 class AgeDuration {
-  ///Store age in days
   int days;
-
-  ///Store age in month
   int months;
-
-  ///Store age in year
   int years;
 
   AgeDuration({this.days = 0, this.months = 0, this.years = 0});
 }
 
-///NIKModel to store converting result
+/// NIKModel to store converting result
 class NIKModel {
-  ///Nik number
   String? nik;
-
-  ///Gender type
   String? gender;
-
-  ///birthday date
   String? bornDate;
-
-  ///Province of country
   String? province;
-
-  ///Province id of country
   String? provinceId;
-
-  ///City where live
   String? city;
-
-  ///City id where live
   String? cityId;
-
-  ///Subdistrict where live
   String? subdistrict;
-
-  ///Subdistrict id where live
   String? subdistrictId;
-
-  ///Unique code from the last digit number in nik
   String? uniqueCode;
-
-  ///Postal code of the subdistrict
   String? postalCode;
-
-  ///Age with output year, month and date
   String? age;
-
-  ///Age in year
   int? ageYear;
-
-  ///Age in month
   int? ageMonth;
-
-  ///Age in day
   int? ageDay;
-
-  ///Next birthday counters count from now
   String? nextBirthday;
-
-  ///Zodiac by born date
   String? zodiac;
-
-  ///Check the nik number is valid or not
   bool? valid;
+  String? name; // Field untuk nama
 
-  //Check Name
-  String? name;
+  NIKModel({
+    this.nik,
+    this.gender,
+    this.bornDate,
+    this.province,
+    this.provinceId,
+    this.city,
+    this.cityId,
+    this.subdistrict,
+    this.subdistrictId,
+    this.uniqueCode,
+    this.postalCode,
+    this.age,
+    this.zodiac,
+    this.valid,
+    this.ageYear,
+    this.ageMonth,
+    this.ageDay,
+    this.nextBirthday,
+    this.name,
+  });
 
-  NIKModel(
-      {this.nik,
-      this.gender,
-      this.bornDate,
-      this.province,
-      this.provinceId,
-      this.city,
-      this.cityId,
-      this.subdistrict,
-      this.subdistrictId,
-      this.uniqueCode,
-      this.postalCode,
-      this.age,
-      this.zodiac,
-      this.valid,
-      this.ageYear,
-      this.ageMonth,
-      this.ageDay,
-      this.nextBirthday,
-      this.name});
-
-  ///Output when the nik number is not valid
   factory NIKModel.empty() => NIKModel(
       nik: "NOT FOUND",
       uniqueCode: " ",
