@@ -1,6 +1,8 @@
 library nik_validator;
 
 import 'dart:convert';
+import 'dart:developer';
+
 import 'package:flutter/services.dart';
 
 ///NIKValidator class to convert Identity Card Informations into useful data
@@ -17,6 +19,7 @@ class NIKValidator {
 
   ///Get date in NIK
   int _getNIKDate(String nik) => int.parse(nik.substring(6, 8));
+
   String _getNIKDateFull(String nik, bool isWoman) {
     int date = int.parse(nik.substring(6, 8));
     if (isWoman) {
@@ -37,15 +40,33 @@ class NIKValidator {
   String? _getProvince(String nik, Map<String, dynamic> location) =>
       location['provinsi'][nik.substring(0, 2)];
 
+  ///Get province id in NIK
+  String? _getProvinceId(String nik, Map<String, dynamic> location) =>
+      nik.substring(0, 2);
+
   ///Get city in NIK
   String? _getCity(String nik, Map<String, dynamic> location) =>
-      location['kabkot'][nik.substring(0, 4)];
+      location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)];
+
+  ///Get city id in NIK
+  String? _getCityId(String nik, Map<String, dynamic> location) =>
+      nik.substring(2, 4);
+
+  ///Get subdisctrict in NIK
+  String? _getSubdistrict(String nik, Map<String, dynamic> location) =>
+      location['kecamatan'][nik.substring(0, 2) + nik.substring(2, 4)]
+          [nik.substring(4, 6)];
+
+  ///Get subdisctrict id in NIK
+  String? _getSubdistrictId(String nik, Map<String, dynamic> location) =>
+      nik.substring(4, 6);
 
   ///Get NIK Gender
   String _getGender(int date) => date > 40 ? "PEREMPUAN" : "LAKI-LAKI";
 
   ///Get born month
   int _getBornMonth(String nik) => int.parse(nik.substring(8, 10));
+
   String _getBornMonthFull(String nik) => nik.substring(8, 10);
 
   ///Get born year
@@ -112,6 +133,8 @@ class NIKValidator {
   Future<NIKModel> parse({required String nik}) async {
     Map<String, dynamic>? location = await _getLocationAsset();
 
+    log("nik valid ${_validate(nik, location)}");
+
     ///Check NIK and make sure is correct
     if (_validate(nik, location)) {
       int currentYear = _getCurrentYear();
@@ -123,10 +146,17 @@ class NIKValidator {
 
       List<String> subdistrictPostalCode =
           _getSubdistrictPostalCode(nik, location!);
+
       String? province = _getProvince(nik, location);
+      String? provinceId = _getProvinceId(nik, location);
+
       String? city = _getCity(nik, location);
-      String subdistrict = subdistrictPostalCode[0];
-      String postalCode = subdistrictPostalCode[1];
+      String? cityId = _getCityId(nik, location);
+
+      String? subdistrict = _getSubdistrict(nik, location);
+      String? subdistrictId = _getSubdistrictId(nik, location);
+
+      String postalCode = "subdistrictPostalCode[1]";
 
       int bornMonth = _getBornMonth(nik);
       String bornMonthFull = _getBornMonthFull(nik);
@@ -140,7 +170,7 @@ class NIKValidator {
       AgeDuration nextBirthday = _getNextBirthday(
           DateTime.parse("$bornYear-$bornMonthFull-$nikDateFull"),
           DateTime.now());
-
+      log("success");
       return NIKModel(
           nik: nik,
           uniqueCode: uniqueCode,
@@ -154,8 +184,11 @@ class NIKValidator {
               "${nextBirthday.months} bulan ${nextBirthday.days} hari lagi",
           zodiac: zodiac,
           province: province,
+          provinceId: provinceId,
           city: city,
+          cityId: cityId,
           subdistrict: subdistrict,
+          subdistrictId: subdistrictId,
           postalCode: postalCode,
           valid: true);
     }
@@ -164,10 +197,20 @@ class NIKValidator {
 
   ///Validate NIK and make sure the number is correct
   bool _validate(String nik, Map<String, dynamic>? location) {
+    log(location!['provinsi'][nik.substring(0, 2)]);
+    log(location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)]
+        .toString());
+    log(location['kecamatan'][nik.substring(0, 2) + nik.substring(2, 4)]
+            [nik.substring(4, 6)]
+        .toString());
+
     return nik.length == 16 &&
-        location!['provinsi'][nik.substring(0, 2)] != null &&
-        location['kabkot'][nik.substring(0, 4)] != null &&
-        location['kecamatan'][nik.substring(0, 6)] != null;
+        location['provinsi'][nik.substring(0, 2)] != null &&
+        location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)] !=
+            null &&
+        location['kecamatan'][nik.substring(0, 2) + nik.substring(2, 4)]
+                [nik.substring(4, 6)] !=
+            null;
   }
 
   ///Load location asset like province, city and subdistrict
@@ -277,11 +320,20 @@ class NIKModel {
   ///Province of country
   String? province;
 
+  ///Province id of country
+  String? provinceId;
+
   ///City where live
   String? city;
 
+  ///City id where live
+  String? cityId;
+
   ///Subdistrict where live
   String? subdistrict;
+
+  ///Subdistrict id where live
+  String? subdistrictId;
 
   ///Unique code from the last digit number in nik
   String? uniqueCode;
@@ -315,8 +367,11 @@ class NIKModel {
       this.gender,
       this.bornDate,
       this.province,
+      this.provinceId,
       this.city,
+      this.cityId,
       this.subdistrict,
+      this.subdistrictId,
       this.uniqueCode,
       this.postalCode,
       this.age,
