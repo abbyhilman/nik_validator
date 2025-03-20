@@ -10,16 +10,6 @@ class NIKValidator {
   /// Membuat instance singleton dari NIKValidator
   static NIKValidator instance = NIKValidator();
 
-  /// Variabel statis untuk menyimpan data tambahan dari input eksternal (OCR/Database)
-  static String? _storedName;       // Menyimpan nama
-  static String? _storedReligion;   // Menyimpan agama
-  static String? _storedOccupation; // Menyimpan pekerjaan
-
-  /// Setter untuk mengatur data sebelum parsing dilakukan
-  void setName(String? name) => _storedName = name;               // Set nama
-  void setReligion(String? religion) => _storedReligion = religion; // Set agama
-  void setOccupation(String? occupation) => _storedOccupation = occupation; // Set pekerjaan
-
   /// Mendapatkan dua digit terakhir dari tahun sekarang
   int _getCurrentYear() =>
       int.parse(DateTime.now().year.toString().substring(2, 4));
@@ -39,16 +29,12 @@ class NIKValidator {
     return date > 9 ? date.toString() : "0$date"; // Tambah 0 jika < 10
   }
 
-  /// Mendapatkan kode pos dari data wilayah (akan diperluas jika JSON memiliki data kecamatan)
+  /// Mendapatkan kode pos dari data wilayah (placeholder karena JSON belum lengkap)
   String _getPostalCode(String nik, Map<String, dynamic> location) {
-    // Saat ini JSON hanya memiliki provinsi dan kabupaten
-    // Jika kecamatan dan kode pos ditambahkan di JSON, logika bisa diperluas
     String provinceId = nik.substring(0, 2);
     String cityId = nik.substring(2, 4);
-    
-    // Placeholder: Kembalikan kode pos dummy karena JSON belum memiliki data kecamatan
-    // Ganti dengan logika sebenarnya jika JSON diperbarui
-    return "KODE POS BELUM TERSEDIA ($provinceId$cityId)"; 
+    // Placeholder: Ganti dengan logika sebenarnya jika JSON diperbarui
+    return "KODE POS BELUM TERSEDIA ($provinceId$cityId)";
   }
 
   /// Mendapatkan nama provinsi dari NIK berdasarkan JSON
@@ -100,15 +86,6 @@ class NIKValidator {
   AgeDuration _getNextBirthday(DateTime bornDate, DateTime now) =>
       Age.instance.dateDifference(fromDate: now, toDate: bornDate);
 
-  /// Mendapatkan nama dari variabel statis, fallback ke "TIDAK TERSEDIA"
-  String? _getName() => _storedName ?? "NAMA TIDAK TERSEDIA";
-  
-  /// Mendapatkan agama dari variabel statis, fallback ke "TIDAK TERSEDIA"
-  String? _getReligion() => _storedReligion ?? "AGAMA TIDAK TERSEDIA";
-  
-  /// Mendapatkan pekerjaan dari variabel statis, fallback ke "TIDAK TERSEDIA"
-  String? _getOccupation() => _storedOccupation ?? "PEKERJAAN TIDAK TERSEDIA";
-
   /// Menentukan zodiak berdasarkan tanggal dan bulan kelahiran
   String _getZodiac(int date, int month, bool isWoman) {
     if (isWoman) date -= 40;
@@ -137,7 +114,13 @@ class NIKValidator {
   }
 
   /// Fungsi utama untuk parsing informasi dari NIK
-  Future<NIKModel> parse({required String nik}) async {
+  /// Parameter tambahan: name, religion, occupation sebagai input langsung
+  Future<NIKModel> parse({
+    required String nik,
+    String? name,
+    String? religion,
+    String? occupation,
+  }) async {
     Map<String, dynamic>? location = await _getLocationAsset();
 
     if (_validate(nik, location)) {
@@ -169,9 +152,10 @@ class NIKValidator {
           DateTime.parse("$bornYear-$bornMonthFull-$nikDateFull"),
           DateTime.now());
 
-      String? extractedName = _getName();
-      String? religion = _getReligion();
-      String? occupation = _getOccupation();
+      // Gunakan parameter langsung atau fallback ke "TIDAK TERSEDIA"
+      String extractedName = name ?? "NAMA TIDAK TERSEDIA";
+      String extractedReligion = religion ?? "AGAMA TIDAK TERSEDIA";
+      String extractedOccupation = occupation ?? "PEKERJAAN TIDAK TERSEDIA";
 
       return NIKModel(
           nik: nik,
@@ -194,8 +178,8 @@ class NIKValidator {
           postalCode: postalCode,
           valid: true,
           name: extractedName,
-          religion: religion,
-          occupation: occupation);
+          religion: extractedReligion,
+          occupation: extractedOccupation);
     }
     return NIKModel.empty();
   }
@@ -205,7 +189,6 @@ class NIKValidator {
     if (nik.length != 16 || location == null) return false;
     return location['provinsi'][nik.substring(0, 2)] != null &&
         location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)] != null;
-    // Validasi kecamatan dihilangkan karena JSON belum mendukung
   }
 
   /// Memuat data lokasi dari file JSON lokal
