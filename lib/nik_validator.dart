@@ -10,16 +10,15 @@ class NIKValidator {
   /// Membuat instance singleton dari NIKValidator
   static NIKValidator instance = NIKValidator();
 
-  /// Variabel statis untuk menyimpan data tambahan dari OCR atau input lain
-  static String? _storedName; // Menyimpan nama
-  static String? _storedReligion; // Menyimpan agama
+  /// Variabel statis untuk menyimpan data tambahan dari input eksternal (OCR/Database)
+  static String? _storedName;       // Menyimpan nama
+  static String? _storedReligion;   // Menyimpan agama
   static String? _storedOccupation; // Menyimpan pekerjaan
 
   /// Setter untuk mengatur data sebelum parsing dilakukan
-  void setName(String? name) => _storedName = name; // Set nama
+  void setName(String? name) => _storedName = name;               // Set nama
   void setReligion(String? religion) => _storedReligion = religion; // Set agama
-  void setOccupation(String? occupation) =>
-      _storedOccupation = occupation; // Set pekerjaan
+  void setOccupation(String? occupation) => _storedOccupation = occupation; // Set pekerjaan
 
   /// Mendapatkan dua digit terakhir dari tahun sekarang
   int _getCurrentYear() =>
@@ -40,17 +39,19 @@ class NIKValidator {
     return date > 9 ? date.toString() : "0$date"; // Tambah 0 jika < 10
   }
 
-  /// Mendapatkan data kecamatan dan kode pos dari NIK
-  List<String> _getSubdistrictPostalCode(
-      String nik, Map<String, dynamic> location) {
-    String data =
-        location['kecamatan'][nik.substring(0, 6)].toString().toUpperCase();
-    List<String> splitData = data.split(" -- ");
-    // Jika ada kode pos setelah "--", kembalikan [nama, kode pos], jika tidak [nama, "NOT AVAILABLE"]
-    return splitData.length > 1 ? splitData : [splitData[0], "NOT AVAILABLE"];
+  /// Mendapatkan kode pos dari data wilayah (akan diperluas jika JSON memiliki data kecamatan)
+  String _getPostalCode(String nik, Map<String, dynamic> location) {
+    // Saat ini JSON hanya memiliki provinsi dan kabupaten
+    // Jika kecamatan dan kode pos ditambahkan di JSON, logika bisa diperluas
+    String provinceId = nik.substring(0, 2);
+    String cityId = nik.substring(2, 4);
+    
+    // Placeholder: Kembalikan kode pos dummy karena JSON belum memiliki data kecamatan
+    // Ganti dengan logika sebenarnya jika JSON diperbarui
+    return "KODE POS BELUM TERSEDIA ($provinceId$cityId)"; 
   }
 
-  /// Mendapatkan nama provinsi dari NIK
+  /// Mendapatkan nama provinsi dari NIK berdasarkan JSON
   String? _getProvince(String nik, Map<String, dynamic> location) =>
       location['provinsi'][nik.substring(0, 2)];
 
@@ -58,7 +59,7 @@ class NIKValidator {
   String? _getProvinceId(String nik, Map<String, dynamic> location) =>
       nik.substring(0, 2);
 
-  /// Mendapatkan nama kota/kabupaten dari NIK
+  /// Mendapatkan nama kota/kabupaten dari NIK berdasarkan JSON
   String? _getCity(String nik, Map<String, dynamic> location) =>
       location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)];
 
@@ -66,10 +67,9 @@ class NIKValidator {
   String? _getCityId(String nik, Map<String, dynamic> location) =>
       nik.substring(2, 4);
 
-  /// Mendapatkan nama kecamatan dari NIK
+  /// Mendapatkan nama kecamatan dari NIK (placeholder, JSON belum mendukung)
   String? _getSubdistrict(String nik, Map<String, dynamic> location) =>
-      location['kecamatan'][nik.substring(0, 2) + nik.substring(2, 4)]
-          [nik.substring(4, 6)];
+      "KECAMATAN BELUM TERSEDIA"; // Ganti jika JSON diperbarui
 
   /// Mendapatkan ID kecamatan dari NIK (digit 5-6)
   String? _getSubdistrictId(String nik, Map<String, dynamic> location) =>
@@ -102,10 +102,10 @@ class NIKValidator {
 
   /// Mendapatkan nama dari variabel statis, fallback ke "TIDAK TERSEDIA"
   String? _getName() => _storedName ?? "NAMA TIDAK TERSEDIA";
-
+  
   /// Mendapatkan agama dari variabel statis, fallback ke "TIDAK TERSEDIA"
   String? _getReligion() => _storedReligion ?? "AGAMA TIDAK TERSEDIA";
-
+  
   /// Mendapatkan pekerjaan dari variabel statis, fallback ke "TIDAK TERSEDIA"
   String? _getOccupation() => _storedOccupation ?? "PEKERJAAN TIDAK TERSEDIA";
 
@@ -148,16 +148,13 @@ class NIKValidator {
 
       String nikDateFull = _getNIKDateFull(nik, gender == "PEREMPUAN");
 
-      List<String> subdistrictPostalCode =
-          _getSubdistrictPostalCode(nik, location!);
-
-      String? province = _getProvince(nik, location);
+      String? province = _getProvince(nik, location!);
       String? provinceId = _getProvinceId(nik, location);
       String? city = _getCity(nik, location);
       String? cityId = _getCityId(nik, location);
       String? subdistrict = _getSubdistrict(nik, location);
       String? subdistrictId = _getSubdistrictId(nik, location);
-      String postalCode = subdistrictPostalCode[1]; // Kode pos
+      String postalCode = _getPostalCode(nik, location); // Kode pos dari JSON
 
       int bornMonth = _getBornMonth(nik);
       String bornMonthFull = _getBornMonthFull(nik);
@@ -203,15 +200,12 @@ class NIKValidator {
     return NIKModel.empty();
   }
 
-  /// Validasi NIK untuk memastikan nomor valid
+  /// Validasi NIK untuk memastikan nomor valid berdasarkan JSON
   bool _validate(String nik, Map<String, dynamic>? location) {
     if (nik.length != 16 || location == null) return false;
     return location['provinsi'][nik.substring(0, 2)] != null &&
-        location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)] !=
-            null &&
-        location['kecamatan'][nik.substring(0, 2) + nik.substring(2, 4)]
-                [nik.substring(4, 6)] !=
-            null;
+        location['kabupaten'][nik.substring(0, 2)][nik.substring(2, 4)] != null;
+    // Validasi kecamatan dihilangkan karena JSON belum mendukung
   }
 
   /// Memuat data lokasi dari file JSON lokal
@@ -294,27 +288,27 @@ class AgeDuration {
 
 /// Model untuk menyimpan hasil parsing NIK
 class NIKModel {
-  String? nik; // Nomor NIK
-  String? gender; // Jenis kelamin
-  String? bornDate; // Tanggal lahir
-  String? province; // Provinsi
-  String? provinceId; // ID Provinsi
-  String? city; // Kota/Kabupaten
-  String? cityId; // ID Kota/Kabupaten
-  String? subdistrict; // Kecamatan
+  String? nik;           // Nomor NIK
+  String? gender;        // Jenis kelamin
+  String? bornDate;      // Tanggal lahir
+  String? province;      // Provinsi
+  String? provinceId;    // ID Provinsi
+  String? city;          // Kota/Kabupaten
+  String? cityId;        // ID Kota/Kabupaten
+  String? subdistrict;   // Kecamatan
   String? subdistrictId; // ID Kecamatan
-  String? uniqueCode; // Kode unik
-  String? postalCode; // Kode pos
-  String? age; // Umur dalam format string
-  int? ageYear; // Umur dalam tahun
-  int? ageMonth; // Umur dalam bulan
-  int? ageDay; // Umur dalam hari
-  String? nextBirthday; // Waktu menuju ulang tahun berikutnya
-  String? zodiac; // Zodiak
-  bool? valid; // Status validitas NIK
-  String? name; // Nama
-  String? religion; // Agama
-  String? occupation; // Pekerjaan
+  String? uniqueCode;    // Kode unik
+  String? postalCode;    // Kode pos
+  String? age;           // Umur dalam format string
+  int? ageYear;          // Umur dalam tahun
+  int? ageMonth;         // Umur dalam bulan
+  int? ageDay;           // Umur dalam hari
+  String? nextBirthday;  // Waktu menuju ulang tahun berikutnya
+  String? zodiac;        // Zodiak
+  bool? valid;           // Status validitas NIK
+  String? name;          // Nama
+  String? religion;      // Agama
+  String? occupation;    // Pekerjaan
 
   NIKModel({
     this.nik,
